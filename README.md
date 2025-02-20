@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 프론트엔드 배포 파이프라인
 
-## Getting Started
+## 배포 아키텍처
 
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```mermaid
+flowchart
+    A[GitHub Repository] -->|Push to main| B[GitHub Actions]
+    B -->|Build| C[Next.js Build]
+    C -->|Deploy| D[AWS S3]
+    D -->|Cache & Serve| E[CloudFront]
+    E -->|Deliver| F[End Users]
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 배포 인프라 구성
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### AWS 서비스 구성
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **S3**
 
-## Learn More
+  - 정적 웹사이트 호스팅을 위한 스토리지
+  - Next.js 빌드 결과물 저장
+  - 버킷 정책으로 CloudFront 접근 허용
 
-To learn more about Next.js, take a look at the following resources:
+- **CloudFront**
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+  - CDN을 통한 전역 콘텐츠 전송
+  - HTTPS 보안 연결 제공
+  - 캐싱을 통한 성능 최적화
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **IAM**
+  - GitHub Actions 배포를 위한 권한 관리
+  - S3 업로드 및 CloudFront 캐시 무효화 권한
 
-## Deploy on Vercel
+## CI/CD 파이프라인
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### GitHub Actions 워크플로우
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **트리거**: main 브랜치 push
+2. **빌드 프로세스**:
+   - 코드 체크아웃
+   - 의존성 설치
+   - Next.js 프로젝트 빌드
+3. **배포 프로세스**:
+   - AWS 자격 증명 구성
+   - S3 버킷에 빌드 결과물 업로드
+   - CloudFront 캐시 무효화
+
+### 자동화된 배포 프로세스
+
+1. 개발자가 main 브랜치에 코드 push
+2. GitHub Actions 워크플로우 자동 실행
+3. 빌드 및 배포 자동화
+4. CloudFront를 통한 전역 배포
+
+## 환경 변수 설정
+
+프로젝트 배포를 위해 다음 GitHub Secrets 설정이 필요합니다:
+
+- `AWS_ACCESS_KEY_ID`: AWS IAM 액세스 키
+- `AWS_SECRET_ACCESS_KEY`: AWS IAM 시크릿 키
+- `AWS_REGION`: AWS 리전 코드
+- `S3_BUCKET_NAME`: S3 버킷 이름
+- `CLOUDFRONT_DISTRIBUTION_ID`: CloudFront 배포 ID
